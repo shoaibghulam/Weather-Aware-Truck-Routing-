@@ -1,0 +1,34 @@
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+*.sqlite3
+backend/staticfiles/
+
+# node
+node_modules/
+frontend/dist/
+coverage/
+playwright-report/
+test-results/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# local claude settings
+.claude/settings.local.json
+
+# local AI tooling and the assessment brief (not part of the submission)
+.claude/
+fs-assessment-spotter.pdf

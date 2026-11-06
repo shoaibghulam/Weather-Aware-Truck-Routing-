@@ -1,0 +1,19 @@
+# Render Blueprint: New > Blueprint > pick this repo. Enter TOMTOM_API_KEY when prompted.
+services:
+  - type: web
+    name: weather-aware-truck-routing
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        value: "https://*.onrender.com"
+      - key: TOMTOM_API_KEY
+        sync: false
