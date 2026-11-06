@@ -141,7 +141,13 @@ this repo, then enter `TOMTOM_API_KEY` when asked.
 - TomTom needs gross weight: we send load + 35,000 lb typical tractor-trailer tare.
 - Risk uses sustained 10 m wind; gusts are shown for information only.
 - Forecasts cover about 15 days; departures are limited to the next 14 days.
-- Free-tier limits: TomTom about 2,500 requests/day; Open-Meteo about 10,000 location-calls/day.
+- Free-tier limits: TomTom about 2,500 requests/day; Open-Meteo about 10,000 location-calls/day
+  **per IP address**. On hosts whose outgoing IPs are shared with other apps (e.g. Render's free
+  plan), that allowance can run out because of other tenants' traffic. The API then returns
+  `WEATHER_RATE_LIMITED` with the limit that was hit (minute, hour or day). Setting
+  `OPEN_METEO_API_KEY` (commercial plan) switches to a per-key quota. A search uses about 30–150
+  location lookups for checkpoints plus up to 150 for the heatmap, and repeat searches are cached
+  for 30 minutes across workers.
   Each plan uses up to 5 TomTom calls (primary + 4 concurrent via-point fallbacks). The API is
   throttled per client IP (60/min), using only the trusted proxy hop of `X-Forwarded-For`.
 - The heatmap shows a continuous 0–4 intensity (level + position within the level's band), so a

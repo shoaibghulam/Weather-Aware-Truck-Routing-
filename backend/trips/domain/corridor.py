@@ -37,10 +37,10 @@ def _build(
 
 def corridor_points(
     routes: Sequence[Sequence[Point]],
-    step_mi: float = 15.0,
+    step_mi: float = 20.0,
     offset_mi: float = 20.0,
-    max_points: int = 300,
-    grid_deg: float = 0.15,
+    max_points: int = 150,
+    grid_deg: float = 0.2,
 ) -> list[Point]:
     """Points on and either side of every route, deduplicated on a grid, capped in count.
 

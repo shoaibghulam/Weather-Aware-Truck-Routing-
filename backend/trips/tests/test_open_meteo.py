@@ -72,6 +72,30 @@ def test_errors_are_mapped(mock_http, response: httpx.Response, code: str) -> No
     assert info.value.code == code
 
 
+@pytest.mark.parametrize(
+    ("reason", "expected"),
+    [
+        ("Daily API request limit exceeded. Please try again tomorrow.", "today"),
+        ("Hourly API request limit exceeded. Please try again in the next hour.", "this hour"),
+        ("Minutely API request limit exceeded. Please try again in one minute.", "minute"),
+        ("", "minute"),
+    ],
+)
+def test_rate_limit_message_names_the_limit(mock_http, reason: str, expected: str) -> None:
+    mock_http.get(OPEN_METEO).respond(429, json={"error": True, "reason": reason})
+    with pytest.raises(ProviderError) as info:
+        open_meteo.fetch_hourly([Point(32, -97)], NOW, NOW + timedelta(hours=1))
+    assert info.value.code == "WEATHER_RATE_LIMITED" and info.value.status == 503
+    assert expected in info.value.message
+
+
+def test_api_key_is_sent_when_configured(mock_http, settings) -> None:
+    settings.OPEN_METEO_API_KEY = "om-test"
+    route = mock_http.get(OPEN_METEO).mock(side_effect=weather_handler())
+    open_meteo.fetch_hourly([Point(32, -97)], NOW, NOW + timedelta(hours=1))
+    assert route.calls.last.request.url.params["apikey"] == "om-test"
+
+
 def test_network_error_is_mapped(mock_http) -> None:
     mock_http.get(OPEN_METEO).mock(side_effect=httpx.ConnectError("down"))
     with pytest.raises(ProviderError) as info:

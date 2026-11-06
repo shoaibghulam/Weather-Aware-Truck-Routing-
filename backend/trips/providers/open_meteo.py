@@ -108,6 +108,8 @@ def _fetch_batch(keys: list[GridKey], start: datetime, end: datetime) -> list[Se
         "start_hour": start.strftime("%Y-%m-%dT%H:%M"),
         "end_hour": end.strftime("%Y-%m-%dT%H:%M"),
     }
+    if settings.OPEN_METEO_API_KEY:
+        params["apikey"] = settings.OPEN_METEO_API_KEY
     try:
         resp = httpx.get(
             settings.OPEN_METEO_BASE_URL, params=params, timeout=settings.HTTP_TIMEOUT_SECONDS
@@ -118,9 +120,7 @@ def _fetch_batch(keys: list[GridKey], start: datetime, end: datetime) -> list[Se
             "WEATHER_UNAVAILABLE", "The weather service could not be reached."
         ) from exc
     if resp.status_code == 429:
-        raise ProviderError(
-            "WEATHER_RATE_LIMITED", "The weather service is busy. Try again in a minute.", 503
-        )
+        raise _rate_limit_error(resp)
     if resp.status_code >= 400:
         logger.warning("Open-Meteo HTTP %s: %s", resp.status_code, resp.text[:300])
         raise ProviderError("WEATHER_UNAVAILABLE", "The weather service rejected the request.")
@@ -132,6 +132,30 @@ def _fetch_batch(keys: list[GridKey], start: datetime, end: datetime) -> list[Se
     if len(locations) != len(keys):
         raise ProviderError("WEATHER_BAD_RESPONSE", "Unexpected weather response.")
     return [_parse_series(loc) for loc in locations]
+
+
+_LIMIT_MESSAGES = {
+    "minutely": "Weather data limit reached for this minute. Try again in a minute.",
+    "hourly": "Weather data limit reached for this hour. Try again later.",
+    "daily": (
+        "The free weather-data allowance for this server is used up for today. "
+        "Try again tomorrow, or configure OPEN_METEO_API_KEY."
+    ),
+}
+
+
+def _rate_limit_error(resp: httpx.Response) -> ProviderError:
+    """Open-Meteo's free tier limits per IP (minute/hour/day); say which one was hit.
+
+    On shared-egress hosts (e.g. Render free) other tenants count against the same IP.
+    """
+    try:
+        reason = str(resp.json().get("reason", ""))
+    except (ValueError, AttributeError):
+        reason = resp.text[:200]
+    logger.warning("Open-Meteo rate limit: %s", reason or "<no reason given>")
+    period = next((p for p in _LIMIT_MESSAGES if p in reason.lower()), "minutely")
+    return ProviderError("WEATHER_RATE_LIMITED", _LIMIT_MESSAGES[period], 503)
 
 
 def _parse_series(location: dict[str, Any]) -> Series:

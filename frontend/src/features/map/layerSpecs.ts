@@ -133,7 +133,8 @@ export function heatmapLayer(palette: RiskPalette): LayerProps {
       // continuous band; intensity is lowered where blobs overlap more, keeping density
       // ~ score/4 so overlapping Low points do not sum into the Moderate colour.
       'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 3, 0.4, 5, 0.55, 7, 0.65, 9, 0.8, 11, 0.9],
-      'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 8, 5, 18, 6, 28, 7, 46, 9, 130, 11, 420],
+      // Corridor grid is ~14 mi (0.2 deg); radius ~1.5x that spacing in pixels at each zoom.
+      'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 3, 10, 5, 24, 6, 38, 7, 62, 9, 180, 11, 560],
       'heatmap-opacity': 0.8,
     },
   }

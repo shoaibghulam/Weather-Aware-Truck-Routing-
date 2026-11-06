@@ -9,7 +9,7 @@ from trips.tests.fakes import weather_handler
 
 @pytest.mark.django_db
 def test_health(api) -> None:
-    assert api.get("/api/health").json() == {"status": "ok"}
+    assert api.get("/api/health").json()["status"] == "ok"
 
 
 @pytest.mark.django_db

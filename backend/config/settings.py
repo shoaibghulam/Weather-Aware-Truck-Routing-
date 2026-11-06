@@ -64,12 +64,23 @@ DATABASES = {
     }
 }
 
+# Production runs several gunicorn workers: a file cache is shared between them, so weather
+# lookups and rate-limit counters are not duplicated per worker. Dev/tests use memory.
+CACHE_DIR = os.environ.get("CACHE_DIR", "")
 CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "truck-routing",
-        "OPTIONS": {"MAX_ENTRIES": 20000},
-    }
+    "default": (
+        {
+            "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+            "LOCATION": CACHE_DIR,
+            "OPTIONS": {"MAX_ENTRIES": 20000},
+        }
+        if CACHE_DIR
+        else {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "truck-routing",
+            "OPTIONS": {"MAX_ENTRIES": 20000},
+        }
+    )
 }
 
 LANGUAGE_CODE = "en-us"
@@ -112,8 +123,14 @@ SILENCED_SYSTEM_CHECKS = ["security.W003", "security.W005", "security.W021"]
 
 # Third-party providers (server side only)
 TOMTOM_API_KEY = os.environ.get("TOMTOM_API_KEY", "")
+# Optional commercial key: per-key quota instead of the free tier's per-IP quota, which shared
+# hosting egress IPs can exhaust. With a key, Open-Meteo requires the customer endpoint.
+OPEN_METEO_API_KEY = os.environ.get("OPEN_METEO_API_KEY", "")
 OPEN_METEO_BASE_URL = os.environ.get(
-    "OPEN_METEO_BASE_URL", "https://api.open-meteo.com/v1/forecast"
+    "OPEN_METEO_BASE_URL",
+    "https://customer-api.open-meteo.com/v1/forecast"
+    if OPEN_METEO_API_KEY
+    else "https://api.open-meteo.com/v1/forecast",
 )
 HTTP_TIMEOUT_SECONDS = float(os.environ.get("HTTP_TIMEOUT_SECONDS", "15"))
 # TomTom truck routing with alternatives on 1,000+ mile trips can take 10-20 s under load.

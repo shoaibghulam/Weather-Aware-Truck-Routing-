@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 from rest_framework.exceptions import Throttled, ValidationError
@@ -59,7 +60,8 @@ class HealthView(APIView):
     throttle_classes: list = []
 
     def get(self, request: Request) -> Response:
-        return Response({"status": "ok"})
+        # Render sets RENDER_GIT_COMMIT; exposing the short SHA shows which build is live.
+        return Response({"status": "ok", "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7]})
 
 
 class GeocodeView(APIView):
