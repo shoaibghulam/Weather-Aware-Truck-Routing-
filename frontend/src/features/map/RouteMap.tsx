@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import MapGL, { NavigationControl, Popup, ScaleControl, type MapLayerMouseEvent, type MapRef } from 'react-map-gl/maplibre'
+import type { GeolocateControl as MaplibreGeolocate } from 'maplibre-gl'
+import MapGL, {
+  GeolocateControl,
+  NavigationControl,
+  Popup,
+  ScaleControl,
+  type MapLayerMouseEvent,
+  type MapRef,
+} from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { HeatmapResponse, PlanResponse } from '../../api/types'
 import { readToken } from '../../lib/tokens'
@@ -17,6 +25,9 @@ const STYLE_DARK = 'https://tiles.openfreemap.org/styles/dark'
 const INITIAL_VIEW = { longitude: -98.5, latitude: 39.5, zoom: 3.4 }
 const FIT_PADDING = { top: 48, right: 48, bottom: 170, left: 48 }
 const FIT_DURATION_MS = 900
+/** Regional zoom around the user's location: shows nearby highways, not street level. */
+const GEOLOCATE_FIT = { maxZoom: 8 }
+const GEOLOCATE_OPTIONS = { enableHighAccuracy: false, timeout: 8000, maximumAge: 600_000 }
 
 interface RouteMapProps {
   plan: PlanResponse | undefined
@@ -38,6 +49,7 @@ interface PopupTarget {
 export function RouteMap(props: RouteMapProps) {
   const { plan, heatmap, selectedRouteId, hoveredRouteId, onSelectRoute, onHoverRoute } = props
   const mapRef = useRef<MapRef | null>(null)
+  const geolocateRef = useRef<MaplibreGeolocate | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
   const [popup, setPopup] = useState<PopupTarget | null>(null)
   const [cursor, setCursor] = useState<string>('')
@@ -85,6 +97,13 @@ export function RouteMap(props: RouteMapProps) {
     [onSelectRoute],
   )
 
+  // On first load, centre on the user's location (browser asks permission). If they decline
+  // or it fails, the map simply stays on the US overview. A planned trip's fitBounds wins.
+  const onLoad = useCallback(() => {
+    setIsLoaded(true)
+    if (!routes && 'geolocation' in navigator) geolocateRef.current?.trigger()
+  }, [routes])
+
   const popupData = popup && routes ? findCheckpoint(routes, popup.routeId, popup.index) : null
 
   return (
@@ -96,7 +115,7 @@ export function RouteMap(props: RouteMapProps) {
         style={{ position: 'absolute', inset: 0 }}
         interactiveLayerIds={INTERACTIVE_LAYER_IDS}
         cursor={cursor}
-        onLoad={() => setIsLoaded(true)}
+        onLoad={onLoad}
         onMouseMove={onMouseMove}
         onMouseLeave={() => onHoverRoute(null)}
         onClick={onClick}
@@ -105,6 +124,14 @@ export function RouteMap(props: RouteMapProps) {
         attributionControl={{ compact: true }}
       >
         <NavigationControl position="top-right" showCompass={false} />
+        <GeolocateControl
+          ref={geolocateRef}
+          position="top-right"
+          positionOptions={GEOLOCATE_OPTIONS}
+          fitBoundsOptions={GEOLOCATE_FIT}
+          trackUserLocation={false}
+          showAccuracyCircle={false}
+        />
         <ScaleControl position="top-left" unit="imperial" />
         {routes && (
           <RouteLayers routes={routes} emphasis={{ selectedId: selectedRouteId, hoveredId: hoveredRouteId }} palette={palette} colors={colors} />
