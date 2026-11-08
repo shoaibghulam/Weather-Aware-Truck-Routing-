@@ -1,4 +1,4 @@
-﻿# Weather-Aware Truck Routing
+# Weather-Aware Truck Routing
 
 A React + Django app that helps a truck driver pick the safest route. It compares three truck
 routes by checking the forecast at each checkpoint at the time the truck will actually be there,
@@ -20,7 +20,7 @@ and takes the load weight into account.
 5. Routes are ranked by No Travel miles, then Severe miles, High miles, average risk and travel
    time. The app explains why the winner won.
 6. The map shows every route, its checkpoints, ETAs and risk levels, plus a **weather heatmap** of
-   the corridor with a 0â€“48 h slider.
+   the corridor with a 0–48 h slider.
 
 ## Run it locally
 
@@ -63,27 +63,27 @@ cd frontend && npm run e2e                   # 3 Playwright end-to-end tests aga
 | Concern | Approach |
 |---|---|
 | Thresholds | Bands are half-open (`[25, 35)`); a value on a shared boundary goes to the **higher** class, except where the spec says `>` (rain > 1.00, snow > 3.0 are No Travel) |
-| Load rules | Raise the wind level only: 45â€“54 mph with > 30,000 lb â†’ No Travel; 35â€“44 mph with > 40,000 lb â†’ Severe |
-| Checkpoint level | The worst of wind (after load rules), rain and snow, with plain-language reasons ("Wind 47 mph with 36,000 lb load â†’ No Travel") |
+| Load rules | Raise the wind level only: 45–54 mph with > 30,000 lb → No Travel; 35–44 mph with > 40,000 lb → Severe |
+| Checkpoint level | The worst of wind (after load rules), rain and snow, with plain-language reasons ("Wind 47 mph with 36,000 lb load → No Travel") |
 | Miles per level | Each checkpoint covers the stretch halfway to its neighbours, so the miles add up to the route length |
 | Missing forecast | Shown as **"No forecast"**, never counted as Low, and the route is flagged |
 | Recommendation | Sort by (No Travel mi, Severe mi, High mi, average risk, duration). Miles are rounded to 0.1 so float noise can't override travel time |
-| Third route | TomTom often returns only 2 truck routes on long trips. Fallback routes through via-points offset to either side of the trip midpoint; duplicates (>80% overlap) and detours (>1.5Ã— the fastest time) are rejected |
+| Third route | TomTom often returns only 2 truck routes on long trips. Fallback routes through via-points offset to either side of the trip midpoint; duplicates (>80% overlap) and detours (>1.5× the fastest time) are rejected |
 
 All decisions, including the ambiguous parts of the spec, are listed in
-[docs/01-requirements-audit.md](docs/01-requirements-audit.md) (A1â€“A12).
+[docs/01-requirements-audit.md](docs/01-requirements-audit.md) (A1–A12).
 
 ## Performance
 
-- **Heatmap slider:** the corridor forecast (49 hours Ã— ~300 points) is loaded **once**. Moving the
+- **Heatmap slider:** the corridor forecast (49 hours × ~300 points) is loaded **once**. Moving the
   slider only changes which `hN` property drives the GPU heatmap weight (`setPaintProperty`). There
   is no request, no data re-upload and no React re-render of the map.
 - **Progressive loading:** routes and checkpoints render first; the heatmap loads in a second request.
 - **Caching and compression:** WhiteNoise serves the fingerprinted build assets gzip-compressed
   with `immutable` caching. MapLibre (the largest dependency) ships in its own chunk.
 - **Routing latency:** the primary TomTom request and the via-point fallbacks run **concurrently**,
-  so planning takes about 6â€“7 s for a 1,300-mile trip instead of waiting for them one after another.
-- **Weather lookups** are snapped to a 0.1Â° grid (~7 mi, finer than the forecast models resolve),
+  so planning takes about 6–7 s for a 1,300-mile trip instead of waiting for them one after another.
+- **Weather lookups** are snapped to a 0.1° grid (~7 mi, finer than the forecast models resolve),
   deduplicated across routes, batched (100 locations per request), fetched in parallel and cached
   for 30 minutes.
 
@@ -132,7 +132,7 @@ The full contract is in [docs/02-architecture.md](docs/02-architecture.md).
 ## Deploy (Render)
 
 `render.yaml` and the `Dockerfile` build the React app and serve it from Django (WhiteNoise), so
-the whole app runs as one service at one URL with no CORS. On Render: **New â†’ Blueprint â†’** pick
+the whole app runs as one service at one URL with no CORS. On Render: **New → Blueprint →** pick
 this repo, then enter `TOMTOM_API_KEY` when asked.
 
 ## Assumptions and limitations
@@ -145,12 +145,12 @@ this repo, then enter `TOMTOM_API_KEY` when asked.
   **per IP address**. On hosts whose outgoing IPs are shared with other apps (e.g. Render's free
   plan), that allowance can run out because of other tenants' traffic. The API then returns
   `WEATHER_RATE_LIMITED` with the limit that was hit (minute, hour or day). Setting
-  `OPEN_METEO_API_KEY` (commercial plan) switches to a per-key quota. A search uses about 30â€“150
+  `OPEN_METEO_API_KEY` (commercial plan) switches to a per-key quota. A search uses about 30–150
   location lookups for checkpoints plus up to 150 for the heatmap, and repeat searches are cached
   for 30 minutes across workers.
   Each plan uses up to 5 TomTom calls (primary + 4 concurrent via-point fallbacks). The API is
   throttled per client IP (60/min), using only the trusted proxy hop of `X-Forwarded-For`.
-- The heatmap shows a continuous 0â€“4 intensity (level + position within the level's band), so a
+- The heatmap shows a continuous 0–4 intensity (level + position within the level's band), so a
   breezy-but-Low corridor still shows faint colour. Each value stays inside its level's band, but
   the rendered heatmap blends neighbouring points, so treat it as an overview: the checkpoint
   levels are the authoritative risk.
